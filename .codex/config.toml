@@ -1,0 +1,21 @@
+# Codex 프로젝트 훅 설정 (project-level, <repo>/.codex/config.toml).
+# .claude/settings.json의 훅과 동일한 안전장치를 codex 세션에도 제공한다.
+# scripts/execute.py가 `--dangerously-bypass-approvals-and-sandbox`로 codex를
+# 호출하므로, 여기 훅이 없으면 codex 실행 step에는 아무 안전장치가 없다.
+
+[[hooks.PreToolUse]]
+matcher = "^Bash$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "python scripts/hooks/pretooluse_guard.py"
+timeout = 10
+statusMessage = "위험 명령어 검사 중"
+
+[[hooks.Stop]]
+
+[[hooks.Stop.hooks]]
+type = "command"
+command = "python scripts/hooks/stop_check.py"
+timeout = 120
+statusMessage = "pytest 실행 중"

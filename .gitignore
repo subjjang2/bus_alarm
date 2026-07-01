@@ -1,0 +1,23 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# secrets — 실제 키는 커밋하지 않는다 (.env.example만 커밋)
+env/.env
+
+# phase execution outputs
+phases/**/phase*-output.json
+phases/**/step*-output.json
+scripts/run.log
+
+# claude runtime logs
+.claude/audit.jsonl

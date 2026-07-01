@@ -1,0 +1,32 @@
+{
+  "project": "bus-alarm-bot",
+  "phase": "0-mvp",
+  "steps": [
+    {
+      "step": 0,
+      "name": "project-setup",
+      "status": "completed",
+      "started_at": "2026-06-25T14:47:13+0900",
+      "summary": "프로젝트 골격 + 설정 로더 생성: requirements.txt(requests/python-dotenv/pytest), Procfile(worker: python -m src.bot), src/__init__.py, tests/__init__.py(빈 파일), src/config.py(Settings 데이터클래스 + load_settings/load_stops/get_scenario, import-only 무예외, utf-8 인코딩 명시), README.md. 외부 API 호출 코드는 아직 없음. .env 키명: SEOUL_BUS_API_KEY/TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID. stops.json 스키마: morning/evening 각각 label/ars_id/routes.",
+      "completed_at": "2026-06-25T14:59:38+0900"
+    },
+    {
+      "step": 1,
+      "name": "bus-service",
+      "status": "completed",
+      "started_at": "2026-06-25T15:16:26+0900",
+      "summary": "src/bus_service.py: 서울 버스도착정보 API 래퍼(getStationByUid, resultType=json). BusEta/Arrival 데이터클래스 + get_arrivals(ars_id, routes, api_key, *, client=requests). 혼잡도 3/4/5→여유/보통/혼잡(그 외/0/없음→None, congetion 오탈자 필드 견딤), arrmsg 정규식으로 minutes/stations_away 파싱(실패해도 raw_msg 보존), routes 순서 유지 필터, 노선당 최대 2 etas(arrmsg1/2). HTTP 호출은 이 모듈에만, 네트워크 예외 미삼킴. tests/test_bus_service.py 10개(mock client 주입, 실네트워크 없음) 통과.",
+      "completed_at": "2026-06-25T15:18:05+0900"
+    },
+    {
+      "step": 2,
+      "name": "telegram-bot",
+      "status": "completed",
+      "started_at": "2026-06-25T15:18:06+0900",
+      "summary": "src/bot.py: 텔레그램 폴링 봇 + 메시지 포맷. format_arrivals(label, arrivals, *, evening) 순수 함수(네트워크 없음)로 UI_GUIDE 노선별 카드형 생성 — 헤더 🌅/🌆, ⏱분, 🟢🟡🔴 혼잡도(None 생략), 정거장 수(None 생략), 분 파싱 실패 시 raw_msg 폴백, 빈 etas/빈 리스트면 '표시할 버스가 없어요' 한 줄. build_message(scenario)→load_settings/load_stops/get_scenario/get_arrivals 호출 후 포맷, 예외는 한 줄 에러로 강등. run()→getUpdates long polling(/morning /evening /start /help, @봇명·offset 처리, TELEGRAM_CHAT_ID 필터, sendMessage 응답). 텔레그램 HTTP 호출은 이 모듈에만, 토큰은 config에서만. __main__→run(). tests/test_bot.py 5개(format_arrivals 순수 함수만). 전체 15개 통과, import src.bot OK.",
+      "completed_at": "2026-06-25T15:20:08+0900"
+    }
+  ],
+  "created_at": "2026-06-25T14:47:13+0900",
+  "completed_at": "2026-06-25T15:20:08+0900"
+}
