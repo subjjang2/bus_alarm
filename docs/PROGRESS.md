@@ -5,22 +5,20 @@
 ## 2026-06-26
 
 ### 현재 상태
-- **페이즈 `0-mvp` 완료 마킹됨** (`a1d33ca chore(0-mvp): mark phase completed`)
-- step 0(프로젝트 셋업/설계 문서) → step 1(`bus-service`) → step 2(`telegram-bot`) 까지 진행 완료
-- 마지막 작업: `serviceKey` 이중 인코딩 방지 픽스 (`e2080e8 fix(0-mvp): serviceKey 이중 인코딩 방지 (unquote)`)
+- 페이즈 `0-mvp` 완료 (프로젝트 셋업/설계 문서 → `bus-service` → `telegram-bot`), 단일 커밋 `cdf7219 feat: bus-alarm-bot MVP 초기 커밋`으로 스쿼시되어 저장소에 반영됨
+- `serviceKey` 이중 인코딩 방지 픽스 포함 (`unquote`)
   - `requests`가 params를 재인코딩하므로, 이미 %-인코딩된 Encoding 키는 `unquote`로 한 번 풀어준다. Decoding 키는 no-op.
 - 테스트: `python -m pytest tests/` → 15 passed
 - working tree 깨끗함 (커밋 안 된 변경 없음)
 
 ### 저장소 / 원격
-- `origin` = https://github.com/subjjang2/harness_framework (private, 작업용)
-- `upstream` = https://github.com/jha0313/harness_framework (원본, push 권한 없음)
-- 작업 브랜치: `feat-0-mvp`
+- `origin` = https://github.com/subjjang2/bus_alarm
+- 작업 브랜치: `main`
 
 ### 다음 환경에서 이어받기
 ```bash
 git fetch origin
-git checkout feat-0-mvp
+git checkout main
 git pull
 python -m pytest tests/   # 동작 확인
 ```
@@ -32,7 +30,7 @@ python -m pytest tests/   # 동작 확인
 step 0~2가 `completed`로 마킹된 것은 셋 다 코드+mock 작업이라 키 없이 끝낼 수 있었기 때문이다. "키가 있어야만 가능한 작업"은 애초에 step으로 만들어지지 않았다.
 
 ### 키 승인되면 할 일 (TODO — 승인 전까지 블로킹)
-- [ ] **실제 API 응답 스키마 검증** — `src/bus_service.py`는 실제 서울 버스 API를 한 번도 호출한 적 없음. 응답 필드명(`msgBody.itemList`, `rtNm`, `arrmsg1/arrmsg2`, 혼잡도)이 전부 가정/mock 기반. 특히 `getStationByUid`가 혼잡도를 주는지 미검증 (`congestion`/오탈자 `congetion` 둘 다 방어 처리해둔 상태 = 실응답 미확인의 방증). 실응답 받아 파싱이 맞는지 확인.
+- [ ] **실제 API 응답 스키마 검증** — `src/bus_service.py`는 실제 서울 버스 API를 한 번도 호출한 적 없음. 응답 필드명(`msgBody.itemList`, `rtNm`, `arrmsg1/arrmsg2`, `congestion1/congestion2`)이 전부 가정/mock 기반. 특히 `getStationByUid`가 각 도착 버스별로 `congestion1`/`congestion2`를 실제로 따로 주는지 미검증. 실응답 받아 파싱이 맞는지 확인.
 - [ ] **로컬 E2E 스모크** — `python -m src.bot` 실행 후 텔레그램에서 `/morning` `/evening` 보내 실데이터 왕복 확인.
 - [ ] **Railway 배포** — `README.md`에 문서화됨, 미배포. 키는 Railway Variables에 입력(코드 하드코딩 금지). 키 승인 후에만 의미 있음.
 

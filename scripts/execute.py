@@ -138,6 +138,17 @@ class StepExecutor:
 
         print(f"  Branch: {branch}")
 
+    def _commit_if_staged(self, msg: str, *, fail_label: str = "커밋") -> bool:
+        """스테이징된 변경이 있으면 커밋한다. 실제로 커밋했으면 True."""
+        if self._run_git("diff", "--cached", "--quiet").returncode == 0:
+            return False
+        r = self._run_git("commit", "-m", msg)
+        if r.returncode == 0:
+            print(f"  Commit: {msg}")
+        else:
+            print(f"  WARN: {fail_label} 실패: {r.stderr.strip()}")
+        return r.returncode == 0
+
     def _commit_step(self, step_num: int, step_name: str):
         output_rel = f"phases/{self._phase_dir_name}/step{step_num}-output.json"
         index_rel = f"phases/{self._phase_dir_name}/index.json"
@@ -145,21 +156,16 @@ class StepExecutor:
         self._run_git("add", "-A")
         self._run_git("reset", "HEAD", "--", output_rel)
         self._run_git("reset", "HEAD", "--", index_rel)
-
-        if self._run_git("diff", "--cached", "--quiet").returncode != 0:
-            msg = self.FEAT_MSG.format(phase=self._phase_name, num=step_num, name=step_name)
-            r = self._run_git("commit", "-m", msg)
-            if r.returncode == 0:
-                print(f"  Commit: {msg}")
-            else:
-                print(f"  WARN: 코드 커밋 실패: {r.stderr.strip()}")
+        self._commit_if_staged(
+            self.FEAT_MSG.format(phase=self._phase_name, num=step_num, name=step_name),
+            fail_label="코드 커밋",
+        )
 
         self._run_git("add", "-A")
-        if self._run_git("diff", "--cached", "--quiet").returncode != 0:
-            msg = self.CHORE_MSG.format(phase=self._phase_name, num=step_num)
-            r = self._run_git("commit", "-m", msg)
-            if r.returncode != 0:
-                print(f"  WARN: housekeeping 커밋 실패: {r.stderr.strip()}")
+        self._commit_if_staged(
+            self.CHORE_MSG.format(phase=self._phase_name, num=step_num),
+            fail_label="housekeeping 커밋",
+        )
 
     # --- top-level index ---
 
@@ -395,11 +401,10 @@ class StepExecutor:
         self._update_top_index("completed")
 
         self._run_git("add", "-A")
-        if self._run_git("diff", "--cached", "--quiet").returncode != 0:
-            msg = f"chore({self._phase_name}): mark phase completed"
-            r = self._run_git("commit", "-m", msg)
-            if r.returncode == 0:
-                print(f"  ✓ {msg}")
+        self._commit_if_staged(
+            f"chore({self._phase_name}): mark phase completed",
+            fail_label="phase 완료 커밋",
+        )
 
         if self._auto_push:
             branch = f"feat-{self._phase_name}"

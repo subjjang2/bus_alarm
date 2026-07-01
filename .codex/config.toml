@@ -12,6 +12,15 @@ command = "python scripts/hooks/pretooluse_guard.py"
 timeout = 10
 statusMessage = "위험 명령어 검사 중"
 
+[[hooks.PreToolUse]]
+matcher = "^(Write|Edit|apply_patch)$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "python scripts/hooks/tdd_guard.py"
+timeout = 10
+statusMessage = "TDD 가드 검사 중"
+
 [[hooks.Stop]]
 
 [[hooks.Stop.hooks]]
