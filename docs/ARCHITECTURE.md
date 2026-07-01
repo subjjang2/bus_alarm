@@ -11,7 +11,7 @@ tests/
 ├── __init__.py
 ├── test_bus_service.py
 └── test_bot.py
-stops.json            # 사용자 정류장 설정
+stops.json            # 사용자 정류장 설정 (시나리오별 ars_id + 방면 groups)
 env/.env(.example)    # API 키
 requirements.txt
 Procfile              # Railway worker: python -m src.bot
@@ -24,11 +24,26 @@ Procfile              # Railway worker: python -m src.bot
 
 ## 데이터 흐름
 ```
-사용자가 /morning 또는 /evening 전송
-  → bot.py: stops.json에서 해당 시나리오의 ars_id, routes 조회
-  → bus_service.get_arrivals(ars_id, routes, api_key): 서울 API 호출 → 도착정보+혼잡도 파싱 → routes로 필터
-  → bot.format_arrivals(): 카드형 메시지 문자열 생성
-  → 텔레그램 sendMessage 로 응답
+사용자가 /morning 또는 /evening 전송 (또는 "🌅 아침"/"🌆 저녁" 버튼)
+  → bot.py: stops.json에서 해당 시나리오의 ars_id, groups(방면별 routes) 조회
+  → bus_service.get_arrivals(ars_id, all_routes, api_key): 서울 API 호출 → 도착정보+혼잡도 파싱 → routes로 필터
+  → bot.format_arrivals(): 방면 그룹별 통합 리스트 메시지 문자열 생성 (docs/UI_GUIDE.md)
+  → 텔레그램 sendMessage 로 응답 (상시 버튼 키보드 포함)
+```
+
+## stops.json 스키마
+시나리오(`morning`/`evening`)마다 `label`(헤더 텍스트), `ars_id`(출발 정류장), `groups`(방면 배열)를 갖는다. 각 그룹은 `label`(방면 이름, 빈 문자열이면 헤더 생략)과 `routes`(그 방면에서 탈 노선번호 목록)로 구성된다.
+```json
+{
+  "evening": {
+    "label": "당산역 출발",
+    "ars_id": "19172",
+    "groups": [
+      {"label": "등촌역 방면", "routes": ["6623", "6632", "605", "661", "6514"]},
+      {"label": "관음·삼성아파트 방면", "routes": ["660", "6631"]}
+    ]
+  }
+}
 ```
 
 ## 외부 API
