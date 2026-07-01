@@ -76,11 +76,9 @@ def _extract_items(payload: dict) -> List[dict]:
     return list(items)
 
 
-def _get_congestion(item: dict):
-    """혼잡도 필드. API 오탈자 'congetion'도 견딘다."""
-    if "congestion" in item:
-        return item.get("congestion")
-    return item.get("congetion")
+def _get_congestion(item: dict, seq: int):
+    """도착 버스 seq(1|2)번째의 혼잡도 필드(congestion1/congestion2)."""
+    return item.get(f"congestion{seq}")
 
 
 def get_arrivals(
@@ -112,12 +110,11 @@ def get_arrivals(
         if not route:
             continue
         route = str(route)
-        congestion = _get_congestion(item)
         etas = [
             eta
             for eta in (
-                _build_eta(item.get("arrmsg1"), congestion),
-                _build_eta(item.get("arrmsg2"), congestion),
+                _build_eta(item.get("arrmsg1"), _get_congestion(item, 1)),
+                _build_eta(item.get("arrmsg2"), _get_congestion(item, 2)),
             )
             if eta is not None
         ]

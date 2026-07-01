@@ -35,9 +35,9 @@ def test_routes_filter_and_order():
     client = FakeClient(
         _payload(
             [
-                {"rtNm": "660", "arrmsg1": "7분후[4번째 전]", "congestion": "5"},
-                {"rtNm": "6516", "arrmsg1": "3분후[2번째 전]", "congestion": "3"},
-                {"rtNm": "999", "arrmsg1": "1분후[1번째 전]", "congestion": "4"},
+                {"rtNm": "660", "arrmsg1": "7분후[4번째 전]", "congestion1": "5"},
+                {"rtNm": "6516", "arrmsg1": "3분후[2번째 전]", "congestion1": "3"},
+                {"rtNm": "999", "arrmsg1": "1분후[1번째 전]", "congestion1": "4"},
             ]
         )
     )
@@ -63,10 +63,10 @@ def test_congestion_mapping_and_none():
     client = FakeClient(
         _payload(
             [
-                {"rtNm": "A", "arrmsg1": "3분후[2번째 전]", "congestion": "3"},
-                {"rtNm": "B", "arrmsg1": "3분후[2번째 전]", "congestion": "4"},
-                {"rtNm": "C", "arrmsg1": "3분후[2번째 전]", "congestion": "5"},
-                {"rtNm": "D", "arrmsg1": "3분후[2번째 전]", "congestion": "0"},
+                {"rtNm": "A", "arrmsg1": "3분후[2번째 전]", "congestion1": "3"},
+                {"rtNm": "B", "arrmsg1": "3분후[2번째 전]", "congestion1": "4"},
+                {"rtNm": "C", "arrmsg1": "3분후[2번째 전]", "congestion1": "5"},
+                {"rtNm": "D", "arrmsg1": "3분후[2번째 전]", "congestion1": "0"},
                 {"rtNm": "E", "arrmsg1": "3분후[2번째 전]"},  # 필드 자체 없음
             ]
         )
@@ -76,13 +76,24 @@ def test_congestion_mapping_and_none():
     assert cong == {"A": "여유", "B": "보통", "C": "혼잡", "D": None, "E": None}
 
 
-def test_congestion_field_typo_congetion():
-    # API 오탈자 필드명 'congetion' 도 견딘다
+def test_congestion_is_per_eta():
+    # arrmsg1/arrmsg2 는 congestion1/congestion2 를 각각 따로 참조한다
     client = FakeClient(
-        _payload([{"rtNm": "A", "arrmsg1": "3분후[2번째 전]", "congetion": "5"}])
+        _payload(
+            [
+                {
+                    "rtNm": "A",
+                    "arrmsg1": "3분후[2번째 전]",
+                    "arrmsg2": "12분후[6번째 전]",
+                    "congestion1": "3",
+                    "congestion2": "5",
+                }
+            ]
+        )
     )
-    arrivals = get_arrivals("16104", None, "KEY", client=client)
-    assert arrivals[0].etas[0].congestion == "혼잡"
+    etas = get_arrivals("16104", None, "KEY", client=client)[0].etas
+    assert etas[0].congestion == "여유"
+    assert etas[1].congestion == "혼잡"
 
 
 def test_arrmsg_parsing():
