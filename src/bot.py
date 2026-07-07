@@ -7,6 +7,7 @@
 
 import json
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -23,6 +24,9 @@ _CONGESTION_EMOJI = {"여유": "🟢", "보통": "🟡", "혼잡": "🔴"}
 _CONGESTION_RANK = {"여유": 0, "보통": 1, "혼잡": 2}
 # 방면 그룹 하나당 보여줄 최대 도착 버스 수
 _MAX_PER_GROUP = 3
+# getUpdates 실패 시 재시도 전 대기 시간(초). 없으면 일시 장애/rate limit 상황에서
+# 무한 재시도로 즉시 폭주할 수 있다.
+_ERROR_BACKOFF_SECONDS = 5
 
 # 상시 버튼 키보드 (매 응답마다 붙여 항상 노출)
 _BTN_MORNING = "🌅 아침"
@@ -194,7 +198,14 @@ def _poll_once(token: str, base: str, offset: Optional[int], allowed_chat: str) 
         )
         resp.raise_for_status()
     except requests.RequestException as exc:
-        print(f"getUpdates 실패: {type(exc).__name__}", file=sys.stderr)
+        # 상태 코드는 409(동시 폴링)/401(토큰) 구분에 필수이고 토큰을 노출하지 않는다.
+        # 반면 예외 문자열/URL은 토큰을 담을 수 있어 남기지 않는다.
+        detail = type(exc).__name__
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if status is not None:
+            detail += f" (status={status})"
+        print(f"getUpdates 실패: {detail}", file=sys.stderr)
+        time.sleep(_ERROR_BACKOFF_SECONDS)
         return offset
 
     for update in resp.json().get("result", []):
@@ -225,6 +236,8 @@ def run() -> None:
     allowed_chat = settings.telegram_chat_id
 
     base = f"https://api.telegram.org/bot{token}"
+    # 정상 기동 여부를 로그로 확인할 수 있게 한다(봇은 에러 외엔 침묵하므로).
+    print("봇 폴링 시작", file=sys.stderr)
     offset = None
     while True:
         offset = _poll_once(token, base, offset, allowed_chat)

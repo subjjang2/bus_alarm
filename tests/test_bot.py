@@ -284,10 +284,55 @@ def test_poll_once_survives_getupdates_network_error(monkeypatch):
         raise requests.ConnectionError("network down")
 
     monkeypatch.setattr(bot.requests, "get", _raise)
+    slept = []
+    monkeypatch.setattr(bot.time, "sleep", lambda seconds: slept.append(seconds))
 
     # 폴링 루프가 죽지 않도록 예외를 삼키고 offset을 그대로 반환해야 한다.
     result = bot._poll_once("TOKEN", "https://api.telegram.org/botTOKEN", 10, "")
     assert result == 10
+    # 네트워크 에러 시 즉시 재시도하며 폭주하지 않도록 백오프가 걸려야 한다.
+    assert slept == [bot._ERROR_BACKOFF_SECONDS]
+
+
+def test_poll_once_no_backoff_on_success(monkeypatch):
+    monkeypatch.setattr(bot, "build_message", lambda name: f"scenario:{name}")
+
+    class FakeResp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"result": []}
+
+    monkeypatch.setattr(bot.requests, "get", lambda *a, **k: FakeResp())
+    slept = []
+    monkeypatch.setattr(bot.time, "sleep", lambda seconds: slept.append(seconds))
+
+    bot._poll_once("TOKEN", "https://api.telegram.org/botTOKEN", None, "")
+    # getUpdates가 성공하면 백오프 없이 바로 다음 반복으로 넘어가야 한다.
+    assert slept == []
+
+
+def test_poll_once_logs_status_code_on_http_error(monkeypatch, capsys):
+    # 409(동시 폴링)/401(토큰) 등을 로그만 보고 구분할 수 있어야 한다.
+    class FakeResp:
+        status_code = 409
+
+        def raise_for_status(self):
+            err = requests.HTTPError("409 Conflict")
+            err.response = self
+            raise err
+
+    monkeypatch.setattr(bot.requests, "get", lambda *a, **k: FakeResp())
+    monkeypatch.setattr(bot.time, "sleep", lambda seconds: None)
+
+    bot._poll_once("TOKEN", "https://api.telegram.org/botTOKEN", 10, "")
+
+    err = capsys.readouterr().err
+    assert "HTTPError" in err
+    assert "409" in err
+    # 상태 코드는 남기되 토큰이 담긴 URL은 절대 남기지 않는다.
+    assert "TOKEN" not in err
 
 
 def test_poll_once_survives_sendmessage_network_error(monkeypatch):
